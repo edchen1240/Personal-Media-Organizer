@@ -1,0 +1,17 @@
+# Core image and EXIF
+Pillow>=10.0
+pillow-heif>=0.13
+exifread>=3.0
+imageio>=2.31
+
+# Video metadata
+ffmpeg-python>=0.2
+
+# Data and reporting
+numpy>=1.24
+pandas>=2.0
+openpyxl>=3.1
+tabulate>=0.9
+
+# Image processing
+opencv-python>=4.8

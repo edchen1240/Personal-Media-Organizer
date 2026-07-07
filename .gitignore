@@ -1,0 +1,31 @@
+# Private project notes (local planning doc)
+P00_Personal Media Organizer.md
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# IDE
+.idea/
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Backups
+*.bak
+
+# Personal reference archive (large code dumps, local paths)
+05_refs/
+
+# Local test media and batch runners (keep benchmark script only)
+01_tests/**
+!01_tests/benchmark_geocoder.py
+
+# Reports generated inside media folders
+*_[*].txt
