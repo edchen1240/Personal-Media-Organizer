@@ -1,6 +1,10 @@
 # Private project notes (local planning doc)
 P00_Personal Media Organizer.md
 
+# Local-only launchers (machine-specific paths)
+[G]_Personal Media Organizer_git.bat
+[V]_Launch VSCode Here.bat
+
 # Python
 __pycache__/
 *.py[cod]
