@@ -25,9 +25,9 @@ from PersonalMediaOrganizer import M3_Image as M3I
 
 
 
-
+# ==============================
 #[1] Direcotory and file - Start
-
+# ==============================
 
 def find_certain_ext_in_dir(dir_folder, ext):
     list_paths = [os.path.join(dir_folder, file) for file in os.listdir(dir_folder) if file.endswith(ext)]
@@ -346,11 +346,28 @@ def make_dir_if_not_exist(dir_to_make=None):
 
 
 
-#[1] Direcotory and file - Start
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ==============================
 #[2] File type statistic in dir and subdir - Start
+# ==============================
+
+
+
 
 
 def file_type_statistic_in_dir_and_subdir(path_dir, mb_limit, save_txt=True):
@@ -556,11 +573,18 @@ def batch_folder_file_stat(list_dirs):
     return df_folders
 
 
-#[2] File type statistic in dir and subdir - End
 
 
 
+
+
+
+
+
+# ==============================
 #[3] Windows specific functions (tkinter) - Start
+# ==============================
+
 
 
 def open_a_folder_on_windows(dir_folder):
@@ -721,12 +745,12 @@ def tkinter_select_multiple_files(dialog_title='Select files', allow_close=False
 
 
 
-#[3] Windows specific functions (tkinter) - End
 
 
 
-
-#[5] Reset files - Start
+# ==============================
+#[4] Reset files - Start
+# ==============================
 
 
 def copy_file_from_dir_to_dir(dir_src, dir_dst, list_ext = [], print_status=False):
@@ -919,15 +943,13 @@ def check_folder_and_reset_files(dir_parent,
 
 
 
-#[5] Reset files - End
 
 
 
+# ==============================
+#[5] Text - Start
+# ==============================
 
-
-
-
-#[2] Text - Start
 
 
 def create_txt_and_save_text(path_txt, text, open_file=True):
@@ -950,37 +972,58 @@ def create_txt_and_save_text(path_txt, text, open_file=True):
         else:                           # For Linux (xdg-open should work for most environments)
             subprocess.run(['xdg-open', path_txt])
             
-#[2] Text - End
+
+
+
+# ==============================
+#[6] Array, Dataframe, Dictionary, and Excel - Start
+# ==============================
+
+def save_df_as_excel_overwrite(df, path_xlsx, sheet_name, index=False):
+    print('\n[save_df_as_excel_overwrite]')
+    
+    #[1] Make dir if not exist.
+    dir_excel = os.path.dirname(path_xlsx)
+    if not os.path.exists(dir_excel):
+        os.makedirs(dir_excel)
+
+    #[2] Try saving, wait if file is open
+    while True:
+        try:
+            if os.path.exists(path_xlsx):
+                with pd.ExcelWriter(path_xlsx, engine='openpyxl', mode='a', if_sheet_exists='replace') as writer:
+                    df.to_excel(writer, sheet_name=sheet_name, index=index)
+            else:
+                with pd.ExcelWriter(path_xlsx, engine='openpyxl') as writer:
+                    df.to_excel(writer, sheet_name=sheet_name, index=index)
+            break  # success: break loop
+
+        except PermissionError:
+            text_warning = f'\n⚠️[Warning] Cannot write to "{path_xlsx}"!\n'\
+                            f'Did you close the excel fiel? Please close the file and hit Enter to try again.'
+            print(text_warning)
+            input('-- Press Enter after closing the Excel file...')
+
+    print(f'-- Dataframe saved to {path_xlsx} in sheet {sheet_name}', end='\n\n')
 
 
 
 
 
-#[3] Array, Dataframe, Dictionary, and Excel - Start
 
-def save_df_as_excel_add_with_full_path(df, path_xlsx, sheet_name_or_index):
-    print('\n[save_df_as_excel_add_with_full_path]')
-    #[1] Convert sheet index to string name if an integer is provided
-    if isinstance(sheet_name_or_index, int):
-        sheet_name = f'Sheet{sheet_name_or_index}'
-    else:
-        sheet_name = str(sheet_name_or_index)  # Ensure sheet_name is always a string
-    #[2] Check if the file exists
-    if os.path.isfile(path_xlsx):
-        book = openpyxl.load_workbook(path_xlsx)
-        
-        #[3] If the sheet exists, remove the existing sheet
-        if sheet_name in book.sheetnames:
-            del book[sheet_name]
-        
-        with pd.ExcelWriter(path_xlsx, engine='openpyxl', mode='a', if_sheet_exists='new') as writer:
-            df.to_excel(writer, sheet_name=sheet_name, index=True)
-    else:  
-        #[4] If file doesn't exist, create a new one
-        with pd.ExcelWriter(path_xlsx, engine='openpyxl', mode='w') as writer:
-            df.to_excel(writer, sheet_name=sheet_name, index=True)
-    print(f'--Dataframe saved to {path_xlsx} in sheet {sheet_name}', end='\n\n')
-    return path_xlsx
+def read_excel_sheet_into_df(path_xlsx, sheet_name=None, print_header=False):
+    #[1] Read the Excel file into a DataFrame
+    if sheet_name is None:
+        sheet_name = 0  # Assuming 0 is the index of the first sheet
+    df = pd.read_excel(path_xlsx, sheet_name=sheet_name)
+    
+    #[2] Tabulate the head of the DataFrame
+    text_header = f"\n[read_excel_into_df] DataFrame Head:\n--\n"\
+                  f"{tabulate(df.head(), headers='keys', tablefmt='orgtbl')}\n--\n"
+    if print_header:
+        print(text_header)
+    del text_header
+    return df
 
 
 
@@ -1006,15 +1049,67 @@ def adjust_multiple_column_widths(path_xlsx, sheet_name, list_column_letters, li
 
 
 
+def save_dict_as_excel_overwrite(dict_input, path_xlsx, sheet_name='dict'):
+    """
+    Save a plain Python dictionary to Excel as a two-column key/value table.
+    The resulting sheet will contain a header row and two columns:
+    ['key', 'value'].
+    This is expected to work with the function read_excel_with_two_columns_into_dict().
+    
+    Uses save_df_as_excel_overwrite so other sheets in the workbook are preserved.
+    """
+    print('\n[save_dict_as_excel_overwrite]')
+    #[1] Validate that dict_input is a dictionary
+    if not isinstance(dict_input, dict):
+        raise TypeError(f'\n🚨[Error] The provided input is not a dictionary.')
+
+    #[2] Convert the dictionary to a two-column DataFrame and save it.
+    #    Prefix values that start with '=' so Excel does not treat them as formulas.
+    list_items = []
+    for k, v in dict_input.items():
+        if isinstance(v, str) and v.startswith('='):
+            v = "'" + v
+        list_items.append((k, v))
+    df = pd.DataFrame(list_items, columns=['key', 'value'])
+    save_df_as_excel_overwrite(df, path_xlsx, sheet_name, index=False)
+    
+
+def read_excel_with_two_columns_into_dict(path_xlsx, sheet_name):
+    """
+    Read an Excel sheet that contains a two-column key/value table and return it as a dictionary.
+    The sheet is expected to work with the function save_dict_as_excel_overwrite().
+    """
+    print('\n[read_excel_with_two_columns_into_dict]')
+    #[1] Read the specified sheet into a DataFrame
+    df = pd.read_excel(path_xlsx, sheet_name=sheet_name)
+    
+    #[2] Check if the DataFrame has at least two columns
+    if df.shape[1] < 2:
+        raise ValueError(f'\n🚨[Error] The sheet "{sheet_name}" must have at least two columns. It is now {df.shape} columns.')
+    
+    #[3] Create a dictionary from the first two columns
+    dict_output = pd.Series(df.iloc[:, 1].values, index=df.iloc[:, 0]).to_dict()
+    
+    print(f'--Dictionary created from {path_xlsx} - {sheet_name}', end='\n\n')
+    return dict_output
 
 
-#[3] Array, Dataframe, Dictionary, and Excel - End
 
 
 
 
 
-#[4] Interation - Start
+
+
+
+
+
+
+
+# ==============================
+#[7] Interation - Start
+# ==============================
+
 
 def ask_for_input(question_message, readback=True, allow_empty=True):
     """
@@ -1045,9 +1140,6 @@ def question_and_if_yes_action(yes_no_question, action_if_yes=None):
         return False
 
 
-
-
-#[4] Interation - End
 
 
 

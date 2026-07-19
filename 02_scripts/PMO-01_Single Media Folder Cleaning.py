@@ -1,6 +1,10 @@
 """
 [PMO-01_Single Media Folder Cleaning.py]
-Purpose: Get "date taken" of photos and videos.
+Purpose: 
+1. Move all AAE files to a subfolder named "01_AAE".
+2. Convert all HEIC files to JPG and keep EXIF info. 
+3. Move all duplicate files to a subfolder named "03_Dup".
+
 Author: Meng-Chi Ed Chen
 Date: 2025-11-15.
 Notes:
