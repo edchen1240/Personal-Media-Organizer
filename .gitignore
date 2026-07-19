@@ -25,10 +25,11 @@ Desktop.ini
 *.bak
 
 # Personal reference archive (large code dumps, local paths)
-05_refs/
+05_notes/
+07_symlinks/
 
 # Local test media and batch runners (keep benchmark script only)
-01_tests/**
+04_tests/**
 !01_tests/benchmark_geocoder.py
 
 # Reports generated inside media folders

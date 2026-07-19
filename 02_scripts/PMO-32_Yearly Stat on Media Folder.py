@@ -16,8 +16,36 @@ from tkinter.filedialog import askdirectory
 
 import os, sys, time
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from PersonalMediaOrganizer import M0_Configuration as M0C
 from PersonalMediaOrganizer import M1_Files as M1F
 from PersonalMediaOrganizer import M3_Image as M3I
+from PersonalMediaOrganizer import M5_Statistics as M5S
+
+
+
+
+
+M5S.MediaFolderOverview(M0C.DIR_MEDIA, M0C.DIR_OUTPUT)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+sys.exit('The following function-like script is awaiting integration. 2026-0715-2143.')
+
+
 
 
 #[1] Ask folder location
@@ -44,7 +72,7 @@ path_xlsx = os.path.join(dir_report, f'{kwd_folder}_Media Stat_{timestamp}.xlsx'
 #[15] Generate statistics for a list of directories.
 df_folders =  M1F.batch_folder_file_stat(list_dirs)
 sheet_name = 'Media stat'
-M1F.save_df_as_excel_add_with_full_path(df_folders, path_xlsx, sheet_name)
+M1F.save_df_as_excel_overwrite(df_folders, path_xlsx, sheet_name)
 list_column_letters = ['B', 'C', 'D', 'E', 'F', 'G']
 list_column_widths = ['20', '20', '20', '20', '20', '20']
 M1F.adjust_multiple_column_widths(path_xlsx, sheet_name, list_column_letters, list_column_widths)

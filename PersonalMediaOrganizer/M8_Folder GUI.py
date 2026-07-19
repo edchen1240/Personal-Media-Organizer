@@ -1,5 +1,5 @@
 """
-[MDS_M6_Folder GUI]
+[MDS_M8_Folder GUI]
 Purpose: Provide a fast launch pad for dated media folders.
 Author: Meng-Chi Ed Chen
 Date: 2024-0613
@@ -7,11 +7,14 @@ Date: 2024-0613
 Status: Complete.
 """
 
-import os, ctypes
+import os, sys, ctypes
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from datetime import datetime
 import tkinter as tk
 
 from PersonalMediaOrganizer import M1_Files as M1F
+
+DIR_MEDIA = r"D:\01_Floor\b_Memory\01_DailyPhotosVedios_2021-2030"
 
 
 def close_explorer_by_date(date_str, exact=False):
@@ -79,7 +82,7 @@ class MediaFolderOpenerGUI:
     def __init__(
         self,
         root,
-        dir_decade=r"D:\\01_Floor\\b_Memory\\01_DailyPhotosVedios_2021-2030",
+        dir_decade=DIR_MEDIA,
         focus_dir_date="2024-01-01",
          ):
         

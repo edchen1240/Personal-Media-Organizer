@@ -29,11 +29,13 @@ Phone backups land in one flat folder. Finding "that beach day in 2021" means sc
 | **PMO-13** Add Timestamp to Image | Burn date/time onto image (useful for prints and sharing) |
 | **PMO-09** Where Was This Photo Taken? | Pick one photo → open Google Maps at GPS coordinates |
 | **PMO-21** GPS at File Level | Batch-extract lat/lon for a date range → export CSV |
-| **PMO-11** Yearly Stat Report | Folder-level photo/video counts by year |
+| **PMO-31** Coarse Statistics | Folder-level photo/video counts and sizes → Excel report + chart (rerun or replot from saved report) |
 | **PMO-14/15/16** Format Conversion | Batch convert to JPG or PNG (with skip rules) |
 | **PMO-18** Fix Image Files | Repair common image issues in a folder |
 | **PMO-26** Extend Image Edge | Add padding around images (e.g. for framing) |
-| **M6** Folder GUI | Fast launcher for date folders — avoids Windows thumbnail overload on huge directories |
+| **PMO-29** Warm Disk Cache (current folder) | Pre-read metadata of a folder at background I/O priority so browsing/scans stay fast |
+| **PMO-30** Warm Disk Cache (media folder) | Same as PMO-29 but for `DIR_MEDIA` — run before PMO-31 for a fast stats pass |
+| **M8** Folder GUI | Fast launcher for date folders — avoids Windows thumbnail overload on huge directories |
 
 ---
 
@@ -44,6 +46,7 @@ Phone backups land in one flat folder. Finding "that beach day in 2021" means sc
 ```bash
 git clone git@github.com:edchen1240/Personal-Media-Organizer.git
 cd Personal-Media-Organizer
+pip install -r requirements.txt --dry-run
 pip install -r requirements.txt
 ```
 
@@ -82,6 +85,11 @@ Each script in `02_scripts/` has a matching launcher in `03_launchers/`. Pass a 
 
 ## Typical workflow
 
+### Workflow 1: Media file dump → sort into date folders
+
+Before beginning, dump your camera roll into one folder. Then run the scripts in this order:
+
+
 ```mermaid
 flowchart LR
     A[Camera roll dump] --> B[PMO-01 or PMO-10]
@@ -92,6 +100,23 @@ flowchart LR
     E --> G[PMO-09 / PMO-21 GPS]
     E --> H[M6 Folder GUI browse]
 ```
+
+
+### Workflow 2: Media folder statistics → Yearly report generation
+
+```mermaid
+
+
+```
+
+
+
+
+### Workflow 3: Facial recognition (planned)
+
+```mermaid
+
+
 
 ---
 
@@ -106,17 +131,20 @@ Personal-Media-Organizer/
 │   ├── M3_Image.py          # EXIF, HEIC, GPS, date sorting
 │   ├── M4_Classes.py        # MediaSortingManager and workflow classes
 │   ├── M5_Statistics.py     # GPS export, yearly stats
-│   └── M6_Folder GUI.py     # Date-folder launcher GUI
+│   ├── M6_System.py         # Background priority, disk cache warming
+│   └── M8_Folder GUI.py     # Date-folder launcher GUI
 ├── 01_tests/                # Local test harnesses (not required to run)
 ├── requirements.txt
 └── README.md
 ```
 
+Note that this is separate from the `DIR_MEDIA` folder where user save all their media files in a format of `YYYY-MM-DD` subfolders. `DIR_MEDIA` should be defined in `M0_Configuration.py` and it's different for every user. 
+
 ---
 
 ## Configuration notes
 
-Some scripts (`PMO-21`, `PMO-11`, `PMO-06`) ship with **placeholder paths** for the author's machine. Edit the `dir_work` / `dir_output` variables at the top of those files before running, or refactor to use `askdirectory()` like the other scripts.
+Some scripts (`PMO-21`, `PMO-31`, `PMO-06`) ship with **placeholder paths** for the author's machine. Edit the `dir_work` / `dir_output` variables at the top of those files before running, or refactor to use `askdirectory()` like the other scripts.
 
 GPS city-name lookup is intentionally disabled (too slow for large libraries). Coordinates and CSV export work today.
 
