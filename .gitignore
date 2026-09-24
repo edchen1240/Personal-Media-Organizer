@@ -34,3 +34,17 @@ Desktop.ini
 
 # Reports generated inside media folders
 *_[*].txt
+
+#[1] Local-only launchers at the repository root. Machine-specific .bat shortcuts that
+#    carry absolute local paths, so they do not belong in a shared repository.
+#    The leading / confines this to the root on purpose: launchers under 03_launchers\,
+#    02_scripts\ and similar are project deliverables and must stay tracked.
+#    Square brackets are a glob character class, so they MUST be escaped, or the rule
+#    matches a filename that has never existed and silently protects nothing. Written as
+#    a glob covering both the _ and the space separator seen in the fleet.
+/\[*\]*.bat
+
+#[2] OS clutter.
+.DS_Store
+Thumbs.db
+Desktop.ini
