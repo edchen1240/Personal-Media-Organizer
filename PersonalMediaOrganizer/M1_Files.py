@@ -1115,7 +1115,9 @@ def ask_for_input(question_message, readback=True, allow_empty=True):
     """
     Ed Chen's function, 2025-06-06.
     """
-    print('\n[ask_for_input] ', end='')
+    # Print the main script that is running this function.
+    bsn_script = os.path.basename(sys.argv[0]) if sys.argv else '(unknown)'
+    print(f'\n[ask_for_input] ({bsn_script}) ', end='')
     while True:
         str_find = input(question_message).strip()
         #[3] Check if str_find is not empty or if empty input is allowed
@@ -1125,6 +1127,9 @@ def ask_for_input(question_message, readback=True, allow_empty=True):
             return str_find
         else:
             print('-- Please enter a non-empty value!')
+
+
+
 
 def question_and_if_yes_action(yes_no_question, action_if_yes=None):
     """
@@ -1142,7 +1147,103 @@ def question_and_if_yes_action(yes_no_question, action_if_yes=None):
 
 
 
+def strip_wrapping_quotes(text):
+    """
+    Strip matching single-quote, double-quote, or backtick pairs from both ends.
+    Repeats until the ends are no longer a matching wrapper pair.
+    """
+    s = text.strip() if isinstance(text, str) else ''
+    while len(s) >= 2 and s[0] == s[-1] and s[0] in "'\"`":
+        s = s[1:-1].strip()
+    return s
 
 
+
+
+def ask_for_directory(  default_dir, 
+                        question        = None,
+                        list_candidates = True
+                        ):
+    """
+    Ask for a directory path. Question text should start with an emoji and end with a Kaomoji.
+    1. Empty answer -> default_dir (e.g. the bat's %~dp0 / argv folder).
+    2. If list_candidates is True, tabulate subdirectories as Index and Folders in orgtbl format.
+        User will enter the Index number to select a folder, or just paste a path.
+    3. Non-empty answers have matching ' / " / ` wrappers stripped from both ends.
+    Non-TTY or EOF -> default_dir with no prompt.
+    Returns: dir_working, dir_bsn
+    """
+    #[1] Normalize default and collect immediate subdirectories when listing candidates
+    default_dir = os.path.normpath(default_dir)
+    list_subdirs = []
+    if list_candidates and os.path.isdir(default_dir):
+        list_subdirs = sorted(
+            [name for name in os.listdir(default_dir)
+             if os.path.isdir(os.path.join(default_dir, name))],
+            key=str.lower,
+        )
+
+    #[2] Default question: emoji … Kaomoji
+    if question is None:
+        if list_candidates:
+            question = (
+                f'\n📂 Is this the directory to start with?\n'
+                f'{default_dir}\n'
+                f'Press enter to keep, enter an Index, or paste a path.\n'
+                f'(•̀ᴗ•́)و\n'
+            )
+        else:
+            question = (
+                f'📂 Is this the directory to start with?\n'
+                f'{default_dir}\n'
+                f'Press enter to keep, or input your path.\n'
+                f'(•̀ᴗ•́)و\n'
+            )
+
+    #[3] Non-interactive: keep argv/bat default
+    if not sys.stdin.isatty():
+        print(f'-- Non-interactive: using default directory: {default_dir}')
+        return default_dir, os.path.basename(default_dir)
+
+    #[4] Show candidate table before the prompt
+    if list_candidates:
+        if list_subdirs:
+            df_candidates = pd.DataFrame({
+                'Index': range(len(list_subdirs)),
+                'Folders': list_subdirs,
+            })
+            print(tabulate(df_candidates, headers='keys', tablefmt='orgtbl', showindex=False))
+        else:
+            print(f'-- No subdirectories under: {default_dir}')
+
+    #[5] Prompt (empty allowed); EOF also falls back to default
+    try:
+        answer = ask_for_input(question, readback=True, allow_empty=True)
+    except EOFError:
+        print(f'-- EOF: using default directory: {default_dir}')
+        return default_dir, os.path.basename(default_dir)
+
+    if not answer:
+        print(f'-- Using default directory: {default_dir}')
+        return default_dir, os.path.basename(default_dir)
+
+    #[6] Strip wrapping quotes / backticks; index selects a listed subdirectory
+    answer = strip_wrapping_quotes(answer)
+    if list_candidates and answer.isdigit():
+        idx = int(answer)
+        if not (0 <= idx < len(list_subdirs)):
+            raise IndexError(
+                f'Index {idx} out of range '
+                f'(0..{len(list_subdirs) - 1 if list_subdirs else "none"}).'
+            )
+        dir_working = os.path.normpath(os.path.join(default_dir, list_subdirs[idx]))
+        print(f'-- Directory received (index {idx}): {dir_working}')
+        return dir_working, os.path.basename(dir_working)
+
+    dir_working = os.path.normpath(answer)
+    if not os.path.isdir(dir_working):
+        raise FileNotFoundError(f'The directory {dir_working} was not found.')
+    print(f'-- Directory received: {dir_working}')
+    return dir_working, os.path.basename(dir_working)
 
 

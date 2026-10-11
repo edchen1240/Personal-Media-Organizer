@@ -12,7 +12,8 @@ from tkinter import filedialog
 import pillow_heif
 
 import numpy as np
-from datetime import datetime
+import re
+from datetime import datetime, timezone
 import pandas as pd
 from PIL import UnidentifiedImageError, Image, ExifTags
 from tabulate import tabulate
@@ -30,6 +31,49 @@ except Exception as e:
 
 
 #[1] Media Datetime - Start
+
+
+def _parse_video_clock(tag_value, assume_utc=False):
+    """
+    Read a QuickTime/ISO datetime tag as the clock time to stamp on the file.
+    Apple creationdate is local wall time (2026-09-25T09:35:10-0400); keep that clock.
+    creation_time is UTC (2026-09-25T13:35:10.000000Z); convert it to local time.
+    """
+    if not tag_value:
+        return None
+    match = re.match(
+        r'(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2}:\d{2})',
+        str(tag_value).strip())
+    if not match:
+        return None
+    clock = datetime.strptime(f'{match.group(1)} {match.group(2)}', '%Y-%m-%d %H:%M:%S')
+    if not assume_utc:
+        return clock
+    return clock.replace(tzinfo=timezone.utc).astimezone().replace(tzinfo=None)
+
+
+def retrieve_datetime_of_video(path_media, datetime_format):
+    """
+    Prefer the camera's recorded time over the filesystem modified time.
+    iPhone MOV stores com.apple.quicktime.creationdate in local time.
+    File mtime is often the copy/export time and is wrong for dating.
+    """
+    try:
+        tags = (ffmpeg.probe(path_media).get('format') or {}).get('tags') or {}
+    except Exception as e:
+        print(f'Warning: video metadata probe failed for {os.path.basename(path_media)}: {e}')
+        tags = {}
+
+    recorded = _parse_video_clock(tags.get('com.apple.quicktime.creationdate'), assume_utc=False)
+    if recorded is not None:
+        return recorded.strftime(datetime_format), '[1] quicktime.creationdate(video)'
+
+    recorded = _parse_video_clock(tags.get('creation_time'), assume_utc=True)
+    if recorded is not None:
+        return recorded.strftime(datetime_format), '[1] creation_time UTC to local(video)'
+
+    media_datetime = datetime.fromtimestamp(os.path.getmtime(path_media)).strftime(datetime_format)
+    return media_datetime, '[3] os.path.getmtime(video)'
 
 
 # This retrieve_datetime_of_single_media_files function is a 
@@ -65,10 +109,9 @@ def retrieve_datetime_of_single_media_files(path_media,
             media_datetime = datetime.fromtimestamp(os.path.getmtime(path_media)).strftime(datetime_format)
             method = '[2] os.path.getmtime(HEIC)'
                 
-    #[4] Check file type for video
-    elif ext in ['.MP4', '.MOV']:
-        media_datetime = datetime.fromtimestamp(os.path.getmtime(path_media)).strftime(datetime_format)
-        method = '[3] os.path.getmtime(video)'
+    #[4] Check file type for video. Use recorded time, not file mtime.
+    elif ext in ['.MP4', '.MOV', '.M4V']:
+        media_datetime, method = retrieve_datetime_of_video(path_media, datetime_format)
     
     #[5] Handle unknown file types
     else:
@@ -247,19 +290,14 @@ def convert_HEIC_to_JPG_and_keep_EXIF_info(dir, delete_or_remove=False, print_st
     #[2] Create a folder to store processed HEIC files.
     dir_processed_HEIC = os.path.join(dir, dump_dir_name)
     make_dir_if_not_exist(dir_processed_HEIC)
+    list_no_exif = []
 
-    #[3] Iterate through the HEIC files.
+    #[3] Iterate through the HEIC files. HEIF opener is registered once at module import.
     for i, path_HEIC in enumerate(list_path_HEIC):
-        #[4] Enable HEIC support in Pillow.
-        try:
-            pillow_heif.register_heif_opener()
-        except Exception:
-            pass  # Already registered globally
-        
-        #[5] Load the HEIC image.
+        #[4] Load the HEIC image.
         bsn_HEIC = os.path.basename(path_HEIC)
         if print_status:
-            print(f'\n[{i:04d}/{cnt_HEIC:04d}] \tProcessing: {bsn_HEIC}', end='')
+            print(f'\n[{i:04d}/{cnt_HEIC:04d}] {bsn_HEIC}', end='')
         try:
             # Try opening with PIL first
             arrimg_HEIC = Image.open(path_HEIC)
@@ -286,35 +324,45 @@ def convert_HEIC_to_JPG_and_keep_EXIF_info(dir, delete_or_remove=False, print_st
                     print(text_error, end='')
                 continue
         
-        #[6] Extract EXIF data and prepare path_JPG.
+        #[5] Extract EXIF data and prepare path_JPG.
         exif_dict = arrimg_HEIC.info.get('exif')
         path_JPG = f'{os.path.splitext(path_HEIC)[0]}.jpg'
         
-        #[7] Convert PIL Image to JPEG and save with EXIF data.
+        #[6] Convert PIL Image to JPEG and save with EXIF data.
         if exif_dict:
             arrimg_HEIC.save(path_JPG, "JPEG", exif=exif_dict)
             if print_status:
-                print(f'\t EXIF data has been found and copied to JPG.', end='')
+                print(f'\t EXIF data found; copied to JPG.', end='')    # Most common result. We hope.
             list_path_JPG.append(path_JPG)
 
-        #[8] Report if no EXIF data.
+            #[7] Delete the original file or just move it (only when EXIF was kept).
+            text_error = delete_or_relocate_the_original_file(path_HEIC, dir_processed_HEIC, delete_or_remove, print_status)
+            if text_error is not None:
+                list_error.append(text_error)
+
+        #[8] No EXIF: save JPG, leave HEIC+JPG for manual decision, do not treat as success.
         else:
             arrimg_HEIC.save(path_JPG, "JPEG")
-            text_error = f'\n\t No EXIF data has been found for \t{bsn_HEIC}.'
+            list_no_exif.append(bsn_HEIC)
+            text_error = (
+                f'\n\t No EXIF for {bsn_HEIC}. '
+                f'JPG saved; original HEIC left in place for manual decision.'
+            )
             list_error.append(text_error)
             if print_status:
                 print(text_error, end='')
-        
-        #[9] Delete the original file or just move it.
-        text_error = delete_or_relocate_the_original_file(path_HEIC, dir_processed_HEIC, delete_or_remove, print_status)
-        if text_error is not None:
-            list_error.append(text_error)
             
-        #[10] Explicitly close the image and free up memory.
+        #[9] Explicitly close the image and free up memory.
         arrimg_HEIC.close()
         del arrimg_HEIC
         gc.collect()
     
+    #[10] Summarize files that need manual review.
+    if list_no_exif:
+        print(f'\n-- {len(list_no_exif)} HEIC file(s) had no EXIF; left for manual decision:')
+        for bsn in list_no_exif:
+            print(f'   - {bsn}')
+
     #[11] Remove the processed_heic_dir if it's empty.
     text_error = remove_dir_if_empty(dir_processed_HEIC)
     if text_error:

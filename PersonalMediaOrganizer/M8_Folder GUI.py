@@ -3,18 +3,26 @@
 Purpose: Provide a fast launch pad for dated media folders.
 Author: Meng-Chi Ed Chen
 Date: 2024-0613
+Notes:
+2026-08-18: On date click, warm that day ±3 neighboring date folders then open.
+            Ctrl+click copies the path and warms the same window (does not open).
+            Enter/Refresh in the focus-date bar does the same warm±3 then open.
+            Warming runs on a background thread so the GUI stays responsive; the
+            clicked day is warmed first, then Explorer opens, then neighbors warm.
 
 Status: Complete.
 """
 
-import os, sys, ctypes
+import os, sys, ctypes, threading
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from datetime import datetime
 import tkinter as tk
 
 from PersonalMediaOrganizer import M1_Files as M1F
+from PersonalMediaOrganizer import M6_System as M6S
 
 DIR_MEDIA = r"D:\01_Floor\b_Memory\01_DailyPhotosVedios_2021-2030"
+WARM_RADIUS_DAYS = 3
 
 
 def close_explorer_by_date(date_str, exact=False):
@@ -109,6 +117,7 @@ class MediaFolderOpenerGUI:
         self.section_frames = {}
         self.buttons = []
         self.default_button_bg = None
+        self._warm_gen = 0
 
         self.initiate_GUI_structure()
 
@@ -171,6 +180,7 @@ class MediaFolderOpenerGUI:
             self.default_button_bg = self.buttons[0].cget('bg')
 
     def refresh_focus_date(self):
+        """Jump to the typed date, warm ±3 neighbors, and open that folder."""
         focus_value = self.focus_entry.get().strip()
         self.focus_dir_date = focus_value if focus_value else None
         self.list_dir_dates, self.focus_index = get_list_date_folders(
@@ -185,11 +195,14 @@ class MediaFolderOpenerGUI:
 
         if self.focus_index is None:
             self.status_var.set('Focus date not found; showing earliest folders.')
-        else:
-            self.status_var.set(f'Showing folders around {self.focus_dir_date}.')
+            self.start_index = self._calc_start_index()
+            self.update_button_grid()
+            return
 
         self.start_index = self._calc_start_index()
         self.update_button_grid()
+        # Same path as a date-button click: warm ±3 then open Explorer
+        self.date_btn_click(self.list_dir_dates[self.focus_index])
 
     def scroll_left(self):
         if self.start_index == 0:
@@ -223,13 +236,19 @@ class MediaFolderOpenerGUI:
 
         #[6] Update buttons
         for idx, btn in enumerate(self.buttons):
+            btn.unbind('<ButtonRelease-1>')
+            btn.unbind('<Control-Button-1>')
             if idx < len(current_slice):
                 dir_path = current_slice[idx]
                 dir_name = os.path.basename(dir_path)
                 btn.configure(
                     text=dir_name,
                     state=tk.NORMAL,
-                    command=lambda p=dir_path: self.date_btn_click(p),
+                    command=lambda: None,
+                )
+                btn.bind(
+                    '<ButtonRelease-1>',
+                    lambda e, p=dir_path: self._on_date_btn_release(e, p),
                 )
                 if self.default_button_bg is not None:
                     btn.configure(bg=self.default_button_bg)
@@ -242,39 +261,127 @@ class MediaFolderOpenerGUI:
                 if self.default_button_bg is not None:
                     btn.configure(bg=self.default_button_bg)
 
+    def _index_of_date_folder(self, path):
+        """Return index of path in list_dir_dates, or None."""
+        target = os.path.normpath(path)
+        for i, dir_path in enumerate(self.list_dir_dates):
+            if os.path.normpath(dir_path) == target:
+                return i
+        return None
+
+    def _dirs_around(self, path, radius=WARM_RADIUS_DAYS):
+        """Return [center, …neighbors] for warming: center first, then ±radius."""
+        path = os.path.normpath(path)
+        center = self._index_of_date_folder(path)
+        if center is None:
+            return [path]
+        lo = max(0, center - radius)
+        hi = min(len(self.list_dir_dates), center + radius + 1)
+        window = self.list_dir_dates[lo:hi]
+        neighbors = [d for d in window if os.path.normpath(d) != path]
+        return [path] + neighbors
+
+    def _set_status_async(self, message):
+        """Thread-safe status update onto the Tk main loop."""
+        self.root.after(0, lambda m=message: self.status_var.set(m))
+
+    def _start_warm_job(self, path, open_after=False, copied=False):
+        """
+        Warm on a background thread so the window stays responsive.
+        Center day is warmed first; if open_after, Explorer opens then;
+        neighbors continue warming afterward. A newer click cancels older jobs.
+        """
+        path = os.path.normpath(path)
+        dirs = self._dirs_around(path)
+        first = os.path.basename(dirs[0])
+        last = os.path.basename(dirs[-1])
+        self._warm_gen += 1
+        gen = self._warm_gen
+        self.status_var.set(f'Warming {len(dirs)} folders ({first} … {last})…')
+        thread = threading.Thread(
+            target=self._warm_worker,
+            args=(path, dirs, open_after, copied, gen),
+            daemon=True,
+        )
+        thread.start()
+
+    def _warm_worker(self, path, dirs, open_after, copied, gen):
+        opened = False
+        for dir_path in dirs:
+            if gen != self._warm_gen:
+                return
+            M6S.warm_folder_metadata(dir_path, print_every=500)
+            if open_after and not opened and os.path.normpath(dir_path) == path:
+                opened = True
+                self.root.after(0, lambda p=path, g=gen: self._open_folder_ui(p, g))
+
+        if gen != self._warm_gen:
+            return
+        if copied and not open_after:
+            self._set_status_async(f'Copied + warmed: {path}')
+        elif open_after:
+            self._set_status_async(
+                f'Opened {os.path.basename(path)} (warmed ±{WARM_RADIUS_DAYS})'
+            )
+        else:
+            self._set_status_async(f'Warmed ±{WARM_RADIUS_DAYS} around {os.path.basename(path)}')
+
+    def _open_folder_ui(self, path, gen):
+        """Open Explorer on the Tk thread after the center day is warm."""
+        if gen != self._warm_gen:
+            return
+        try:
+            M1F.open_a_folder_on_windows(path)
+            self.status_var.set(
+                f'Opened {os.path.basename(path)}; still warming neighbors…'
+            )
+        except Exception as exc:
+            self.status_var.set(f'Failed to open folder: {exc}')
+
+    def _on_date_btn_release(self, event, path):
+        """Plain click opens; Ctrl+click copies path. Both warm ±3 days."""
+        if event.state & 0x0004:
+            return self._ctrl_click_copy_and_warm(event, path)
+        self.date_btn_click(path)
+
+    def _ctrl_click_copy_and_warm(self, event, path):
+        """Ctrl+click: copy path immediately; warm ±3 days in the background."""
+        path = os.path.normpath(path)
+        self.root.clipboard_clear()
+        self.root.clipboard_append(path)
+        self.root.update_idletasks()
+        self._start_warm_job(path, open_after=False, copied=True)
+        return 'break'
+
     def date_btn_click(self, path):
         """
         1. Close any previously opened folder windows for self.current_date.
         2. Update self.current_date.
-        3. Open the selected folder.
-        """   
-                
+        3. Warm selected day (then open) and ±3 neighbors on a background thread.
+        """
+        path = os.path.normpath(path)
+
         #[1] Close the self.current_date folders.
         if self.current_date:
             close_explorer_by_date(self.current_date, exact=False)
-        
-        #[3] Update current date
+
+        #[2] Update current date
         self.current_date = os.path.basename(path)
-        
-        #[4] Open the folder using MDS_M1_Files function
-        try:
-            M1F.open_a_folder_on_windows(path)
-            self.status_var.set(f"Opened {os.path.basename(path)}")
-        except Exception as exc:
-            self.status_var.set(f"Failed to open folder: {exc}")
+
+        #[3] Warm center → open Explorer → warm neighbors (non-blocking UI)
+        self._start_warm_job(path, open_after=True, copied=False)
 
     def _calc_start_index(self):
         """
         The focus_date should be at the top of the second column if possible.
         """
-        
+
         if self.focus_index is None:
             return 0
 
         max_start = max(0, len(self.list_dir_dates) - self.page_size)
         preferred_start = max(0, self.focus_index - 1)
         return min(preferred_start, max_start)
-
 
 if __name__ == "__main__":
     root = tk.Tk()
