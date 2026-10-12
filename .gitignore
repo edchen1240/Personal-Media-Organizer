@@ -44,6 +44,10 @@ Desktop.ini
 #    a glob covering both the _ and the space separator seen in the fleet.
 /\[*\]*.bat
 
+#    One exception to "02_scripts launchers are deliverables": BFR-13 is a personal shortcut that
+#    cd's into a different project (2024-0106_Batch File Rename), so it ignores here as a glob.
+/02_scripts/\[*\]_BFR-*.bat
+
 #[2] OS clutter.
 .DS_Store
 Thumbs.db
