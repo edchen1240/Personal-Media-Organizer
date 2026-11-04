@@ -50,8 +50,9 @@ sys.exit('The following function-like script is awaiting integration. 2026-0715-
 
 #[1] Ask folder location
 print('\nWelcome to Media Date Sorting.\nLet us turn your mements into memories.')
-dir_memory = r'C:/path/to/your/folder'
-dir_report = r'C:/path/to/your/folder'
+dir_memory = M0C.LIST_DIR_MEDIA[-1]
+dir_report = os.path.join(M0C.DIR_OUTPUT, 'PMO-32_Yearly Stat Report')
+os.makedirs(dir_report, exist_ok=True)
 print(f'Please make sure the directories are set correctly.\ndir_memory: \t{dir_memory}\ndir_report: \t{dir_report}')
 
 

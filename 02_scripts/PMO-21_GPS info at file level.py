@@ -11,6 +11,7 @@ Status: Final complete version.
 """
 import os, sys, time
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from PersonalMediaOrganizer import M0_Configuration as M0C
 from PersonalMediaOrganizer import M1_Files as M1F
 from PersonalMediaOrganizer import M3_Image as M3I
 from PersonalMediaOrganizer import M4_Classes as M4C
@@ -18,8 +19,8 @@ from PersonalMediaOrganizer import M5_Statistics as M5S
 
 if __name__ == '__main__':
     #[2] Input settings.
-    dir_work =      r'C:/path/to/your/folder'
-    dir_output =    r'C:/path/to/your/folder'
+    dir_work =      M0C.LIST_DIR_MEDIA[-1]
+    dir_output =    os.path.join(M0C.DIR_OUTPUT, 'PMO-21_GPS Stat')
     date_start =    '2021-02-01'
     date_end =      '2021-03-31'
 

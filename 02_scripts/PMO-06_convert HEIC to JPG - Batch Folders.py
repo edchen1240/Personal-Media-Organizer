@@ -14,6 +14,7 @@ from datetime import datetime
 from PIL import UnidentifiedImageError, Image
 from tkinter.filedialog import askdirectory
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from PersonalMediaOrganizer import M0_Configuration as M0C
 from PersonalMediaOrganizer import M1_Files as M1F
 from PersonalMediaOrganizer import M3_Image as M3I
 
@@ -25,7 +26,7 @@ if batch_or_single == 'single':
     dir_current, dir_bns = M1F.get_working_dir_from_sysargv()
     list_dir = [dir_current]
 else:
-    parent_dir = r'C:/path/to/your/folder'
+    parent_dir = M0C.LIST_DIR_MEDIA[0]
     folder_kwd = '2019-02-2'
     list_dir = [os.path.join(parent_dir, d) for d in os.listdir(parent_dir) if folder_kwd in d and os.path.isdir(os.path.join(parent_dir, d))]
 

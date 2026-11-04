@@ -14,7 +14,6 @@ from PersonalMediaOrganizer import M3_Image as M3I
 
 if __name__ == '__main__':
     #[1] Ask folder location
-    #path_img = r'C:/path/to/your/folder'
     path_img, bsn_img = M1F.tkinter_select_file(dialog_title='Select a file')
 
     if not path_img:

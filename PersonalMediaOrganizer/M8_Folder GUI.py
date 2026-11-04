@@ -18,10 +18,11 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from datetime import datetime
 import tkinter as tk
 
+from PersonalMediaOrganizer import M0_Configuration as M0C
 from PersonalMediaOrganizer import M1_Files as M1F
 from PersonalMediaOrganizer import M6_System as M6S
 
-DIR_MEDIA = r"C:/path/to/your/folder"
+DIR_MEDIA = M0C.LIST_DIR_MEDIA[-1]
 WARM_RADIUS_DAYS = 3
 
 

@@ -133,18 +133,17 @@ Personal-Media-Organizer/
 │   ├── M5_Statistics.py     # GPS export, yearly stats
 │   ├── M6_System.py         # Background priority, disk cache warming
 │   └── M8_Folder GUI.py     # Date-folder launcher GUI
-├── 01_tests/                # Local test harnesses (not required to run)
 ├── requirements.txt
 └── README.md
 ```
 
-Note that this is separate from the `DIR_MEDIA` folder where user save all their media files in a format of `YYYY-MM-DD` subfolders. `DIR_MEDIA` should be defined in `M0_Configuration.py` and it's different for every user. 
+Note that this is separate from the `DIR_MEDIA` folder where user save all their media files in a format of `YYYY-MM-DD` subfolders. `DIR_MEDIA` is different for every user, so it is set in your own `PersonalMediaOrganizer/M0_Local_Paths.py` (see Configuration notes below), not in the shared code. 
 
 ---
 
 ## Configuration notes
 
-Some scripts (`PMO-21`, `PMO-31`, `PMO-06`) ship with **placeholder paths** for the author's machine. Edit the `dir_work` / `dir_output` variables at the top of those files before running, or refactor to use `askdirectory()` like the other scripts.
+Your own folders live in one local file that is never committed. Before the first run, copy `PersonalMediaOrganizer/M0_Local_Paths.example.py` to `PersonalMediaOrganizer/M0_Local_Paths.py` and set `LIST_DIR_MEDIA` to your media library folder(s). The copy is listed in `.gitignore`, so `git add` cannot stage it. For a quick single-folder trial you can instead set the `PMO_MEDIA_DIR` environment variable. Without either, the scripts print a warning and fall back to a placeholder path that does not exist. `LAT_CENTER` and `LON_CENTER` in the same file give `PMO-22` its default search center; otherwise pass `--lat` and `--lon`.
 
 GPS city-name lookup is intentionally disabled (too slow for large libraries). Coordinates and CSV export work today.
 

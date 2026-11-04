@@ -24,7 +24,6 @@ from PersonalMediaOrganizer import M3_Image as M3I
 
 
 #[1] Ask folder location
-#dir_sort = r'C:/path/to/your/folder' # It's connected with bat files. Don't change.
 #dir_sort, bsn_dir = M3I.tkinter_select_directory(dialog_title='Select a directory')
 #dir_sort = os.getcwd()     # Remove this line when fixing the code in VC code.
 

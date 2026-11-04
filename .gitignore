@@ -5,6 +5,13 @@ P00_Personal Media Organizer.md
 [G]_Personal Media Organizer_git.bat
 [V]_Launch VSCode Here.bat
 
+# Machine-specific paths and coordinates (copy M0_Local_Paths.example.py to this name and fill it in)
+PersonalMediaOrganizer/M0_Local_Paths.py
+
+# Reports written by the scripts: the 06_output folder is public, its files are not
+06_output/*
+!06_output/.gitkeep
+
 # Python
 __pycache__/
 *.py[cod]
@@ -28,9 +35,8 @@ Desktop.ini
 05_notes/
 07_symlinks/
 
-# Local test media and batch runners (keep benchmark script only)
-04_tests/**
-!01_tests/benchmark_geocoder.py
+# Local test media, test scripts and batch runners (nothing in here is public)
+04_tests/
 
 # Reports generated inside media folders
 *_[*].txt
