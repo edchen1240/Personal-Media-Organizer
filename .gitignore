@@ -8,6 +8,10 @@ P00_Personal Media Organizer.md
 # Machine-specific paths and coordinates (copy M0_Local_Paths.example.py to this name and fill it in)
 PersonalMediaOrganizer/M0_Local_Paths.py
 
+# Private agent instructions (AGENTS.md is public, these are not)
+CLAUDE.md
+CLAUDE.local.md
+
 # Reports written by the scripts: the 06_output folder is public, its files are not
 06_output/*
 !06_output/.gitkeep
